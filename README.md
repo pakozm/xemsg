@@ -27,3 +27,14 @@ example which opens a TCP port, waits for messages and prints them into screen:
 > x = assert( xe.bind(s, "tcp://*:4321") )
 > while true do print(xe.recv(s, 0)) end
 ```
+
+## Other known bindings
+
+- Official for LuaJIT, mainly developed by Pierre Chapuis:
+  [luajit-nanomsg](https://github.com/nanomsg/luajit-nanomsg)
+
+- For Lua5.1 using LuaFFI, developed by Neopallium:
+  [lua-nanomsg](https://github.com/Neopallium/lua-nanomsg)
+
+- For Lua 5.2 in Windows, developed by Andrew Starks and Christian Bechette:
+  [nml](https://github.com/trms/nml)
