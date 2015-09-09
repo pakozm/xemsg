@@ -20,7 +20,7 @@ assert:
 ```
 
 Xemsg! is at least as easier as nanomsg. The following is a simple server
-example which opens a TCP port, waits for messages and print them into screen:
+example which opens a TCP port, waits for messages and prints them into screen:
 
 ```Lua
 > s = assert( xe.socket(xe.AF_SP, xe.NN_PULL) )
