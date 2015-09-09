@@ -1,4 +1,4 @@
-LIBS := $(shell pkg-config --libs libnanomsg) $(shell pkg-config --libs lua5.2) -pthread -lm
+LIBS := $(shell pkg-config --libs libnanomsg) $(shell pkg-config --libs lua5.2) -lm
 CFLAGS := $(shell pkg-config --cflags libnanomsg) $(shell pkg-config --cflags lua5.2) -O2 -shared -fPIC 
 
 all: xemsg.so
