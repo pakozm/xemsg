@@ -16,13 +16,13 @@ description = {
 }
 
 dependencies = {
-  "lua >= 5.2",
+  "lua",
 }
 
 external_dependencies = {
   LIBNANOMSG = {
     header = "/usr/include/nanomsg/nn.h",
-    library = "libnanomsg",
+    library = "nanomsg",
   },
 }
 

@@ -5,6 +5,17 @@ FFI). The name Xemsg! is a valencian joke: we normally use the word *nano* to
 refer to our budies, and in some cases it is preceded by *xe* word to form the
 following interjection: **Xe nano!**
 
+## Installation
+
+From a terminal:
+
+```
+$ git clone https://github.com/pakozm/xemsg.git
+$ cd xemsg
+$ make
+$ sudo make install
+```
+
 ## Use
 
 Xemsg! has been developed to be a plain binding of nanomsg library, but
