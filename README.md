@@ -41,14 +41,14 @@ example which opens a TCP port, waits for messages and prints them into screen:
 
 ### Reference
 
-** socket(domain, protocol)
+**socket(domain, protocol)**
 
 Opens an SP socket.
 
 `id [, error_msg] = xe.socket(domain, protocol)`
 
-- domain: `xe.AF_SP` for standard SP socket, `xe.AF_SP_RAW` for a raw one.
-- protocol: more information in nanomsg documentation:
+- domain: a number, `xe.AF_SP` for standard SP socket, `xe.AF_SP_RAW` for a raw one.
+- protocol: a number, more information in nanomsg documentation:
   [pubsub](http://nanomsg.org/v0.6/nn_pubsub.7.html),
   [reqprep](http://nanomsg.org/v0.6/nn_reqrep.7.html),
   [pipeline](http://nanomsg.org/v0.6/nn_pipeline.7.html),
@@ -58,44 +58,58 @@ Opens an SP socket.
 It returns the socket id in case of success or `nil` followed by an error
 message in case of error.
 
-** close(s)
+**close(s)**
 
 Close an SP socket
 nn_close(3)
+
+**setsockopt(s, level, option, optval)**
+
 Set a socket option
 nn_setsockopt(3)
+
+**getsockopt(s, level, option)**
+
 Retrieve a socket option
 nn_getsockopt(3)
+
+**bind(s, addr)**
+
 Add a local endpoint to the socket
 nn_bind(3)
+
+**connect(s, addr)**
+
 Add a remote endpoint to the socket
 nn_connect(3)
+
+**shutdown(s, how)**
+
 Remove an endpoint from the socket
 nn_shutdown(3)
+
+**send(s, buf, flags)**
+
 Send a message
 nn_send(3)
+
+**recv(s, [n,] flags)**
+
 Receive a message
 nn_recv(3)
-Fine-grained alternative to nn_send
-nn_sendmsg(3)
-Fine-grained alternative to nn_recv
-nn_recvmsg(3)
-Allocation of messages
-nn_allocmsg(3) nn_reallocmsg(3) nn_freemsg(3)
-Manipulation of message control data
-nn_cmsg(3)
+
+**poll(fds, timeout)**
+
 Multiplexing
 nn_poll(3)
-Retrieve the current errno
-nn_errno(3)
-Convert an error number into human-readable string
-nn_strerror(3)
-Query the names and values of nanomsg symbols
-nn_symbol(3)
-Query properties of nanomsg symbols
-nn_symbol_info(3)
+
+**device(s1, s2)**
+
 Start a device
 nn_device(3)
+
+**term()**
+
 Notify all sockets about process termination
 nn_term(3)
 
