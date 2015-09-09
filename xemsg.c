@@ -14,6 +14,10 @@
 #include <nanomsg/reqrep.h>
 #include <nanomsg/survey.h>
 
+/**
+ * Returns 1 if the value 'n' at stack 'L' is an integer, and stores its value
+ * at the given pointer 'r'. Otherwise, it returns 0 and 'r' is not used.
+ */
 int xelua_isinteger(lua_State *L, int n, int *r) {
   if (lua_isnumber(L,n)) {
     double aux = lua_tonumber(L, n);
@@ -23,6 +27,10 @@ int xelua_isinteger(lua_State *L, int n, int *r) {
   return 0;
 }
 
+/**
+ * Returns 1 if the value 'n' at stack 'L' is a short integer, and stores its
+ * value at the given pointer 'r'. Otherwise, it returns 0 and 'r' is not used.
+ */
 int xelua_isshort(lua_State *L, int n, short *r) {
   if (lua_isnumber(L,n)) {
     double aux = lua_tonumber(L, n);
@@ -32,8 +40,10 @@ int xelua_isshort(lua_State *L, int n, short *r) {
   return 0;
 }
 
-/* checks a returned int and pushes it into Lua in case of success, otherwise
-   pushes a nil value followed by the error string */
+/**
+ * Checks a returned int and pushes it into Lua in case of success, otherwise
+ * pushes a nil value followed by the error string.
+ */
 int check_int(lua_State *L, int r) {
   if (r < 0) {
     int err = nn_errno();
@@ -46,8 +56,10 @@ int check_int(lua_State *L, int r) {
   }
 }
 
-/* checks a returned int and pushes true into Lua in case of success, otherwise
-   pushes a nil value followed by the error string */
+/**
+ * Checks a returned int and pushes true into Lua in case of success, otherwise
+ * pushes a nil value followed by the error string.
+ */
 int check_succ(lua_State *L, int r) {
   if (r < 0) {
     int err = nn_errno();
@@ -105,11 +117,13 @@ int xemsg_getsockopt(lua_State *L) {
                          option,
                          optval,
                          &optvallen );
-  if (r < 0) {
+  if (r < 0) { /* error case */
     lua_pushnil(L);
     lua_pushstring(L, nn_strerror(nn_errno()));
     return 2;
   }
+  /* the value optval depends on option value, check it and push into Lua the
+     corresponding result */
   switch(option) {
   case NN_SOCKET_NAME: lua_pushlstring(L, optval, optvallen); break;
   default: lua_pushinteger(L, *((int*)optval)); break;
@@ -122,11 +136,13 @@ int xemsg_poll(lua_State *L) {
   double seconds;
   struct nn_pollfd *fds;
   int n = luaL_len(L,1), i, milis, r;
+  /* alloc memory for pollfd array, initializing it with the data of Lua table
+     at position 1 in the stack */
   fds = (struct nn_pollfd*)malloc(sizeof(struct nn_pollfd)*n);
   for (i=1; i<=n; ++i) {
     lua_rawgeti(L, 1, i);
-    lua_getfield(L, -1, "fd"); /* fd */
-    lua_getfield(L, -2, "events"); /* events */
+    lua_getfield(L, -1, "fd");
+    lua_getfield(L, -2, "events");
     if (!xelua_isshort(L, -1, &fds[i-1].events) ||
         !xelua_isinteger(L, -2, &fds[i-1].fd)) {
       free(fds);
@@ -134,27 +150,31 @@ int xemsg_poll(lua_State *L) {
     }
     lua_pop(L, 3);
   }
+  /* timeout is given as a real number of seconds, read it from Lua and convert
+     it to miliseconds integer */
   seconds = luaL_checknumber(L, 2);
   milis = (int)(seconds * 1000.0);
   r = nn_poll( fds, n, milis ); /* LIBRARY CALL */
-  if (r < 0) {
+  if (r < 0) { /* error case */
     free(fds);
     lua_pushnil(L);
     lua_pushstring(L, nn_strerror(nn_errno()));
     return 2;
   }
-  if (r == 0) {
+  if (r == 0) { /* timeout case */
     free(fds);
     lua_pushnumber(L, 0);
     lua_pushstring(L, "timeout");
     return 2;
   }
+  /* general case: write 'revents' field in the table at stack's position 1 */
   for (i=1; i<=n; ++i) {
     lua_rawgeti(L, 1, i);
     lua_pushnumber(L, fds[i-1].revents);
     lua_setfield(L, -2, "revents");
     lua_pop(L, 1);
   }
+  /* return number of fd's ready to be read of written */
   lua_pushnumber(L, r);
   free(fds);
   return 1;
@@ -162,12 +182,15 @@ int xemsg_poll(lua_State *L) {
 
 /* msg,error_msg = xemsg.recv(s, [n,] flags) */
 int xemsg_recv(lua_State *L) {
+  /* two cases depending in the number of values at the stack */
   int n = lua_gettop(L);
   if (n == 2) {
+    /* first case: two values, the socket and the flags; call nn_recv to
+       allocate a buffer with enough space for reading the whole message */
     void *buf;
     int r = nn_recv( luaL_checkinteger(L, 1), &buf, NN_MSG,
                      luaL_checkinteger(L, 2) );
-    if (r < 0) {
+    if (r < 0) { /* error case */
       lua_pushnil(L);
       lua_pushstring(L, nn_strerror(nn_errno()));
       return 2;
@@ -176,6 +199,9 @@ int xemsg_recv(lua_State *L) {
     nn_freemsg(buf);
     return 1;
   } else if (n == 3) {
+    /* second case: three values, the socket, the expected message size and the
+       flags; call nn_recv with a Lua buffer allocated to store the expected
+       length */
     int s     = luaL_checkinteger(L, 1);
     size_t sz = luaL_checkinteger(L, 2);
     int flags = luaL_checkinteger(L, 3);
@@ -183,9 +209,9 @@ int xemsg_recv(lua_State *L) {
     char *buf_str = luaL_buffinitsize(L, &buf, sz);
     int r = nn_recv( s, buf_str, sz, flags );
     if (r < 0) {
+      luaL_pushresultsize(&buf, sz); lua_pop(L, 1);
       lua_pushnil(L);
       lua_pushstring(L, nn_strerror(nn_errno()));
-      luaL_pushresultsize(&buf, sz); lua_pop(L, 1);
       return 2;
     }
     luaL_pushresultsize(&buf, sz);
@@ -200,6 +226,8 @@ int xemsg_send(lua_State *L) {
   const void *buf;
   size_t len;
   int type = lua_type(L, 2);
+  /* depending in the type of the data, buf will point to a userdata message or
+     to a string */
   switch(type) {
   case LUA_TUSERDATA:
     buf = luaL_checkudata(L, 2, "nn_buffer");
@@ -221,10 +249,13 @@ int xemsg_send(lua_State *L) {
 
 /* ok,error_msg = xemsg.setsockopt(s, level, option, optval) */
 int xemsg_setsockopt(lua_State *L) {
-  union { int vint; const char *vstr; } optval_u;
   const void *optval;
+  /* this union allow to point optval to an integer or a string value */
+  union { int vint; const char *vstr; } optval_u;
   size_t optvallen;
   int type = lua_type(L, 4);
+  /* depending in the type of the data, optval will point to a integer or to a
+     string */
   switch(type) {
   case LUA_TNUMBER:
     optval_u.vint = luaL_checkinteger(L, 4);
