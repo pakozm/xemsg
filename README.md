@@ -72,7 +72,7 @@ example which opens a TCP port, waits for messages and prints them into screen:
 ```Lua
 > s = assert( xe.socket(xe.AF_SP, xe.NN_PULL) )
 > x = assert( xe.bind(s, "tcp://*:4321") )
-> while true do print(xe.recv(s, 0)) end
+> while true do print(xe.recv(s)) end
 ```
 
 ### Reference
@@ -248,7 +248,7 @@ Receives a message.
 - e_num: error number, only in case of failure.
 
 
-**poll(fds, timeout)**
+**poll(fds [, timeout])**
 
 Multiplexing several sockets for events.
 
@@ -302,7 +302,7 @@ fds = {
 The field `revents` indicates which of the `events` are ready, so it will be any
 of the following values: `xe.NN_POLLIN`, `xe.NN_POLLOUT` or `xe.NN_POLLINOUT`.
 
-**device(s1, s2)**
+**device(s1 [, s2])**
 
 Starts a device.
 
