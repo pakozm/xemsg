@@ -1,15 +1,15 @@
 # Xemsg!
 
-Plain binding of [nanomsg](https://github.com/nanomsg/nanomsg) to Lua 5.2 (no
-FFI). The name Xemsg! is a valencian joke: we normally use the word *nano* to
-refer to our budies, and in some cases it is preceded by *xe* word to form the
-following interjection: **Xe nano!**
+Plain binding of [nanomsg](https://github.com/nanomsg/nanomsg) to Lua (no FFI),
+working for Lua 5.1 and Lua 5.2. The name Xemsg! is a valencian joke: we
+normally use the word *nano* to refer to our budies, and in some cases it is
+preceded by *xe* word to form the following interjection: **Xe nano!**
 
 ## Why another nanomsg binding?
 
 All the requirements we need are not fulfilled in current bindings. The
 requirements here are: a simple library for gluing nanomsg and Lua without any
-other dependency (no LuaFFI), besides Lua 5.2 and Unix like OS.
+other dependency (no LuaFFI), besides Lua 5.1/5.2 and Unix like OS.
 
 Currently exists three other well known bindings:
 
