@@ -1,4 +1,6 @@
 /*
+ * This file is part of Xemsg! a Lua binding for nanomsg library.
+
  * Copyright (c) 2015 Francisco Zamora-Martinez (pakozm@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -36,7 +38,7 @@
 #include <nanomsg/survey.h>
 
 #define XEMSG_NAME_FIELD    "_NAME"
-#define XEMSG_NAME          "xemsg"
+#define XEMSG_NAME          "Xemsg!"
 #define XEMSG_VERSION_FIELD "_VERSION"
 #define XEMSG_VERSION       "0.1"
 
@@ -66,22 +68,27 @@ int xelua_isshort(lua_State *L, int n, short *r) {
   return 0;
 }
 
-int check_error(lua_State *L, int r) {
+/**
+ * Checks the value of 'r', in case of 'r<0', it pushes into stack 'L'
+ * a nil value, an error message string and the error number.
+ */
+int xelua_check_error(lua_State *L, int r) {
   if (r < 0) {
     int err = nn_errno();
     lua_pushnil(L);
     lua_pushstring(L, nn_strerror(err));
-    return 2;
+    lua_pushnumber(L, err);
+    return 3;
   }
   return 0;
 }
 
 /**
  * Checks a returned int and pushes it into Lua in case of success, otherwise
- * pushes a nil value followed by the error string.
+ * pushes a nil value followed by the error string and error number.
  */
-int check_int(lua_State *L, int r) {
-  int nret = check_error(L, r);
+int xelua_check_int(lua_State *L, int r) {
+  int nret = xelua_check_error(L, r);
   if (nret) return nret;
   lua_pushinteger(L, r);
   return 1;
@@ -89,10 +96,10 @@ int check_int(lua_State *L, int r) {
 
 /**
  * Checks a returned int and pushes true into Lua in case of success, otherwise
- * pushes a nil value followed by the error string.
+ * pushes a nil value followed by the error string and error number.
  */
-int check_succ(lua_State *L, int r) {
-  int nret = check_error(L, r);
+int xelua_check_succ(lua_State *L, int r) {
+  int nret = xelua_check_error(L, r);
   if (nret) return nret;
   lua_pushboolean(L, 1);
   return 1; 
@@ -115,38 +122,38 @@ int check_succ(lua_State *L, int r) {
 */
 
 /**
- * id,error_msg = xemsg.bind(s, addr) 
+ * id,e_msg,e_num = xe.bind(s, addr) 
  */
 int xemsg_bind(lua_State *L) {
-  return check_int(L, nn_bind( luaL_checkinteger(L, 1),
-                               luaL_checkstring(L,2) ));
+  return xelua_check_int(L, nn_bind( luaL_checkinteger(L, 1),
+                                     luaL_checkstring(L,2) ));
 }
 
 /**
- * ok,error_msg = xemsg.close(s)
+ * ok,e_msg,e_num = xe.close(s)
  */
 int xemsg_close(lua_State *L) {
-  return check_succ(L, nn_close( luaL_checkinteger(L, 1) ));
+  return xelua_check_succ(L, nn_close( luaL_checkinteger(L, 1) ));
 }
 
 /**
- * id,error_msg = xemsg.connect(s, addr)
+ * id,e_msg,e_num = xe.connect(s, addr)
  */
 int xemsg_connect(lua_State *L) {
-  return check_int(L, nn_connect( luaL_checkinteger(L, 1),
-                                  luaL_checkstring(L, 2) ));
+  return xelua_check_int(L, nn_connect( luaL_checkinteger(L, 1),
+                                        luaL_checkstring(L, 2) ));
 }
 
 /**
- * nil,error_msg = xemsg.device(s1[, s2])
+ * nil,e_msg,e_num = xe.device(s1[, s2])
  */
 int xemsg_device(lua_State *L) {
-  return check_succ(L, nn_device( luaL_checkinteger(L, 1),
-                                  luaL_optinteger(L, 2, -1) ));
+  return xelua_check_succ(L, nn_device( luaL_checkinteger(L, 1),
+                                        luaL_optinteger(L, 2, -1) ));
 }
 
 /**
- * optval,error_msg = xemsg.getsockopt(s, level, option)
+ * optval,e_msg,e_num = xe.getsockopt(s, level, option)
  */
 int xemsg_getsockopt(lua_State *L) {
   void *optval = NULL;
@@ -157,7 +164,7 @@ int xemsg_getsockopt(lua_State *L) {
                          option,
                          optval,
                          &optvallen );
-  int nret = check_error(L, r);
+  int nret = xelua_check_error(L, r);
   if (nret) return nret; /* error case */
   /* the value optval depends on option value, check it and push into Lua the
      corresponding result */
@@ -169,7 +176,7 @@ int xemsg_getsockopt(lua_State *L) {
 }
 
 /**
- * n,error_msg = xemsg_poll({ {fd=fd, events=events}, {fd=fd, events=events}, ...}, timeout)
+ * n,e_msg,e_num = xemsg_poll({ {fd=fd, events=events}, {fd=fd, events=events}, ...}, timeout)
  */
 int xemsg_poll(lua_State *L) {
   double seconds;
@@ -194,7 +201,7 @@ int xemsg_poll(lua_State *L) {
   seconds = luaL_checknumber(L, 2);
   milis = (int)(seconds * 1000.0);
   r = nn_poll( fds, n, milis ); /* LIBRARY CALL */
-  nret = check_error(L, r);
+  nret = xelua_check_error(L, r);
   if (nret) { /* error case */
     free(fds);
     return nret;
@@ -202,8 +209,7 @@ int xemsg_poll(lua_State *L) {
   if (r == 0) { /* timeout case */
     free(fds);
     lua_pushnumber(L, 0);
-    lua_pushstring(L, "timeout");
-    return 2;
+    return 1;
   }
   /* general case: write 'revents' field in the table at stack's position 1 */
   for (i=1; i<=n; ++i) {
@@ -219,7 +225,7 @@ int xemsg_poll(lua_State *L) {
 }
 
 /**
- * msg,error_msg = xemsg.recv(s, [n,] flags)
+ * msg,e_msg,e_num = xe.recv(s, [n,] flags)
  */
 int xemsg_recv(lua_State *L) {
   /* two cases depending in the number of values at the stack */
@@ -230,7 +236,7 @@ int xemsg_recv(lua_State *L) {
     void *buf;
     int r = nn_recv( luaL_checkinteger(L, 1), &buf, NN_MSG,
                      luaL_checkinteger(L, 2) );
-    int nret = check_error(L, r);
+    int nret = xelua_check_error(L, r);
     if (nret) return nret; /* error case */
     lua_pushlstring(L, buf, r);
     nn_freemsg(buf);
@@ -246,10 +252,12 @@ int xemsg_recv(lua_State *L) {
     char *buf_str = luaL_buffinitsize(L, &buf, sz);
     int r = nn_recv( s, buf_str, sz, flags );
     if (r < 0) {
+      int err = nn_errno();
       luaL_pushresultsize(&buf, sz); lua_pop(L, 1);
       lua_pushnil(L);
-      lua_pushstring(L, nn_strerror(nn_errno()));
-      return 2;
+      lua_pushstring(L, nn_strerror(err));
+      lua_pushnumber(L, err);
+      return 3;
     }
     luaL_pushresultsize(&buf, sz);
     return 1;
@@ -259,7 +267,7 @@ int xemsg_recv(lua_State *L) {
 }
 
 /**
- * size,error_msg = xemsg.send(s, buf, flags)
+ * size,e_msg,e_num = xe.send(s, buf, flags)
  */
 int xemsg_send(lua_State *L) {
   const void *buf;
@@ -277,17 +285,18 @@ int xemsg_send(lua_State *L) {
   default:
     lua_pushnil(L);
     lua_pushstring(L, "Expected string or nn_buffer at 2nd argument");
-    return 2;
+    lua_pushnil(L);
+    return 3;
   }
   len = lua_rawlen(L, 2);
-  return check_int(L, nn_send( luaL_checkinteger(L, 1),
-                               buf,
-                               len,
-                               luaL_checkinteger(L, 3) ));
+  return xelua_check_int(L, nn_send( luaL_checkinteger(L, 1),
+                                     buf,
+                                     len,
+                                     luaL_checkinteger(L, 3) ));
 }
 
 /**
- * ok,error_msg = xemsg.setsockopt(s, level, option, optval)
+ * ok,e_msg,e_num = xe.setsockopt(s, level, option, optval)
  */
 int xemsg_setsockopt(lua_State *L) {
   const void *optval;
@@ -311,33 +320,34 @@ int xemsg_setsockopt(lua_State *L) {
   default:
     lua_pushnil(L);
     lua_pushstring(L, "Expected number or string at 4th argument");
-    return 2;
+    lua_pushnil(L);
+    return 3;
   }
-  return check_succ(L, nn_setsockopt( luaL_checkinteger(L, 1),
-                                      luaL_checkinteger(L, 2),
-                                      luaL_checkinteger(L, 3),
-                                      optval,
-                                      optvallen ));
+  return xelua_check_succ(L, nn_setsockopt( luaL_checkinteger(L, 1),
+                                            luaL_checkinteger(L, 2),
+                                            luaL_checkinteger(L, 3),
+                                            optval,
+                                            optvallen ));
 }
 
 /**
- * ok,error_msg = xemsg.shutdown(s, how)
+ * ok,e_msg,e_num = xe.shutdown(s, how)
  */
 int xemsg_shutdown(lua_State *L) {
-  return check_succ(L, nn_shutdown( luaL_checkinteger(L, 1),
-                                    luaL_checkinteger(L, 2) ));
+  return xelua_check_succ(L, nn_shutdown( luaL_checkinteger(L, 1),
+                                          luaL_checkinteger(L, 2) ));
 }
 
 /**
- * id,error_msg = xemsg.socket(domain, protocol)
+ * id,e_msg,e_num = xe.socket(domain, protocol)
  */
 int xemsg_socket(lua_State *L) {
-  return check_int(L, nn_socket( luaL_checkinteger(L, 1),
-                                 luaL_checkinteger(L, 2) ));
+  return xelua_check_int(L, nn_socket( luaL_checkinteger(L, 1),
+                                       luaL_checkinteger(L, 2) ));
 }
 
 /**
- * xemsg.term()
+ * xe.term()
  */
 int xemsg_term(lua_State *L) {
   (void) L;
