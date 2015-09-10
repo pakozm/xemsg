@@ -24,7 +24,7 @@ endif
 PREFIX := /usr
 LUADIR := $(PREFIX)/lib/$(LUA)/$(VER)
 
-CFLAGS := -Wall -O2 $(LUAFLAGS) $(NANOMSGFLAGS) $(OSFLAGS)
+CFLAGS := -g -Wall $(LUAFLAGS) $(NANOMSGFLAGS) $(OSFLAGS)
 LIBS := $(LUALIBS) $(NANOMSGLIBS) $(OSLIBS)
 
 all: check $(PLAT)
