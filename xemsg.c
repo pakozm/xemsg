@@ -285,7 +285,7 @@ int xemsg_send(lua_State *L) {
   default:
     lua_pushnil(L);
     lua_pushstring(L, "Expected string or nn_buffer at 2nd argument");
-    lua_pushnil(L);
+    lua_pushnumber(L, EINVAL);
     return 3;
   }
   len = lua_rawlen(L, 2);
@@ -320,7 +320,7 @@ int xemsg_setsockopt(lua_State *L) {
   default:
     lua_pushnil(L);
     lua_pushstring(L, "Expected number or string at 4th argument");
-    lua_pushnil(L);
+    lua_pushnumber(L, EINVAL);
     return 3;
   }
   return xelua_check_succ(L, nn_setsockopt( luaL_checkinteger(L, 1),

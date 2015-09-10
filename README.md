@@ -40,7 +40,8 @@ following some common patterns in Lua. For instance, all functions return one or
 two values. In case of success, one value is returned with the expected content
 by the user. In case of failure, a `nil` is returned as first value and an error
 message as second value, allowing to wrap almost all function calls around an
-assert:
+assert. A third argument with the error number is also returned, allowing to
+perform different actions depending in the error type.
 
 ```Lua
 > xe = require "xemsg"
