@@ -33,6 +33,24 @@ $ make
 $ sudo make install
 ```
 
+### Compilation details
+
+The makefile automatically detects which platform and Lua version are you
+using, so for compilation you just need to do:
+
+```
+$ make
+```
+
+You can force the platform compilation by using `$ make Linux` or `$ make Darwin`.
+Additionally, you can force the Lua version by doing:
+
+```
+$ make LUAPKG=lua5.2
+```
+
+where `lua5.2` can be replaced by `lua5.1` and `luajit`.
+
 ## Use
 
 Xemsg! has been developed to be a plain binding of nanomsg library, but

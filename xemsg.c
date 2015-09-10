@@ -42,6 +42,10 @@
 #define XEMSG_VERSION_FIELD "_VERSION"
 #define XEMSG_VERSION       "0.1"
 
+#if LUA_VERSION_NUM < 502
+#define luaL_len(L,n) (int)lua_objlen((L),(n))
+#endif
+
 /**
  * Returns 1 if the value 'n' at stack 'L' is an integer, and stores its value
  * at the given pointer 'r'. Otherwise, it returns 0 and 'r' is not used.
@@ -246,8 +250,18 @@ int xemsg_recv(lua_State *L) {
        flags; call nn_recv with a Lua buffer allocated to store the expected
        length */
     int s     = luaL_checkinteger(L, 1);
-    size_t sz = luaL_checkinteger(L, 2);
     int flags = luaL_checkinteger(L, 3);
+#if LUA_VERSION_NUM < 502
+    /* TODO: implement using luaL_Buffer in Lua 5.1 */
+    void *buf;
+    int r = nn_recv( s, &buf, NN_MSG, flags );
+    int nret = xelua_check_error(L, r);
+    if (nret) return nret; /* error case */
+    lua_pushlstring(L, buf, r);
+    nn_freemsg(buf);
+    return 1;
+#else
+    size_t sz = luaL_checkinteger(L, 2);
     luaL_Buffer buf;
     char *buf_str = luaL_buffinitsize(L, &buf, sz);
     int r = nn_recv( s, buf_str, sz, flags );
@@ -261,6 +275,7 @@ int xemsg_recv(lua_State *L) {
     }
     luaL_pushresultsize(&buf, sz);
     return 1;
+#endif
   } else {
     return luaL_error(L, "Incorrect number of arguments, expected 2 or 3");
   }
@@ -288,7 +303,7 @@ int xemsg_send(lua_State *L) {
     lua_pushnumber(L, EINVAL);
     return 3;
   }
-  len = lua_rawlen(L, 2);
+  len = luaL_len(L, 2);
   return xelua_check_int(L, nn_send( luaL_checkinteger(L, 1),
                                      buf,
                                      len,
@@ -375,9 +390,14 @@ int luaopen_xemsg(lua_State *L) {
     {"term", xemsg_term},
     {NULL, NULL}
   };
-  
-  luaL_newlib(L, funcs);
 
+#if LUA_VERSION_NUM < 502
+  lua_newtable(L);
+  luaL_register(L, NULL, funcs);
+#else
+  luaL_newlib(L, funcs);
+#endif  
+  
   /* export all available symbols */
   for (i=0; (symbol_name = nn_symbol(i, &symbol_value)); ++i) {
     lua_pushinteger(L, symbol_value);
