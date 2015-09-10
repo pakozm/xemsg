@@ -210,34 +210,38 @@ Removes an endpoint from the socket.
 - e_msg: string with error message, only in case of failure.
 - e_num: error number, only in case of failure.
 
-**send(s, buf, flags)**
+**send(s, buf [, flags])**
 
 Sends a message.
 
-`size [, e_msg, e_num] = xe.send(s, buf, flags)`
+`size [, e_msg, e_num] = xe.send(s, buf [, flags])`
 
 - s: socket number identifier.
 - buf: a string with the message data.
-- flags: a number with a bit set of flags. Normally it is `0` or
-  `xe.NN_DONTWAIT`.
+- flags: an optional number with a bit set of flags. Normally it is `0` or
+  `xe.NN_DONTWAIT`. By default it is set to 0.
 
 - size: the number of bytes in the message, or `nil` in case of failure.
 - e_msg: string with error message, only in case of failure.
 - e_num: error number, only in case of failure.
 
-**recv(s, [n,] flags)**
+**recv(s [, n] [, flags])**
 
 Receives a message.
 
-`msg [, e_msg, e_num] = xe.recv(s, [n,] flags)`
+`msg [, e_msg, e_num] = xe.recv(s)`
+
+`msg [, e_msg, e_num] = xe.recv(s, flags)`
+
+`msg [, e_msg, e_num] = xe.recv(s, n, flags)`
 
 - s: socket number identifier.
 - n: an optional number indicating the expected size of the message. When this
   parameter is present, a lua_Buffer is given to nanomsg for reducing memory
   overhead. If not given, the string returned by nanomsg will be duplicated into
   Lua stack.
-- flags: a number with a bit set of flags. Normally it is `0` or
-  `xe.NN_DONTWAIT`.
+- flags: an optional number with a bit set of flags. Normally it is `0` or
+  `xe.NN_DONTWAIT`. By default it is set to 0.
 
 - msg: a string with the received message or `nil` in case of failure.
 - e_msg: string with error message, only in case of failure.
@@ -248,10 +252,10 @@ Receives a message.
 
 Multiplexing several sockets for events.
 
-`n [, e_msg, e_num] = xe.poll(fds, timeout)`
+`n [, e_msg, e_num] = xe.poll(fds [, timeout])`
 
 - fds: a table used as input/output parameter.
-- timeout: number of seconds before timeout.
+- timeout: optional number of mili-seconds before timeout, by default it is 0.
 
 - n: a number indicating how many SP sockets are ready for the indicated events.
   It is 0 in case of timeout, and `nil` in case of failure.

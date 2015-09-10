@@ -180,10 +180,9 @@ int xemsg_getsockopt(lua_State *L) {
 }
 
 /**
- * n,e_msg,e_num = xemsg_poll({ {fd=fd, events=events}, {fd=fd, events=events}, ...}, timeout)
+ * n,e_msg,e_num = xemsg_poll({ {fd=fd, events=events}, {fd=fd, events=events}, ...} [, timeout])
  */
 int xemsg_poll(lua_State *L) {
-  double seconds;
   struct nn_pollfd *fds;
   int n = luaL_len(L,1), i, milis, r, nret;
   /* alloc memory for pollfd array, initializing it with the data of Lua table
@@ -200,10 +199,7 @@ int xemsg_poll(lua_State *L) {
     }
     lua_pop(L, 3);
   }
-  /* timeout is given as a real number of seconds, read it from Lua and convert
-     it to miliseconds integer */
-  seconds = luaL_checknumber(L, 2);
-  milis = (int)(seconds * 1000.0);
+  milis = luaL_optinteger(L, 2, 0);
   r = nn_poll( fds, n, milis ); /* LIBRARY CALL */
   nret = xelua_check_error(L, r);
   if (nret) { /* error case */
@@ -229,24 +225,27 @@ int xemsg_poll(lua_State *L) {
 }
 
 /**
- * msg,e_msg,e_num = xe.recv(s, [n,] flags)
+ * msg,e_msg,e_num = xe.recv(s [, n] [, flags])
  */
 int xemsg_recv(lua_State *L) {
-  /* two cases depending in the number of values at the stack */
+  /* three cases depending in the number of values at the stack */
   int n = lua_gettop(L);
-  if (n == 2) {
-    /* first case: two values, the socket and the flags; call nn_recv to
-       allocate a buffer with enough space for reading the whole message */
+  if (n >= 1 && n <= 2) {
+    /* first and second case: call nn_recv to allocate a buffer with enough
+       space for reading the whole message */
+    int flags = 0;
+    /* optional flags */
+    if (n == 2) flags = luaL_checkinteger(L, 2);
     void *buf;
-    int r = nn_recv( luaL_checkinteger(L, 1), &buf, NN_MSG,
-                     luaL_checkinteger(L, 2) );
+    int r = nn_recv( luaL_checkinteger(L, 1), &buf, NN_MSG, flags );
     int nret = xelua_check_error(L, r);
     if (nret) return nret; /* error case */
     lua_pushlstring(L, buf, r);
     nn_freemsg(buf);
     return 1;
-  } else if (n == 3) {
-    /* second case: three values, the socket, the expected message size and the
+  }
+  else if (n == 3) {
+    /* third case: three values, the socket, the expected message size and the
        flags; call nn_recv with a Lua buffer allocated to store the expected
        length */
     int s     = luaL_checkinteger(L, 1);
@@ -282,7 +281,7 @@ int xemsg_recv(lua_State *L) {
 }
 
 /**
- * size,e_msg,e_num = xe.send(s, buf, flags)
+ * size,e_msg,e_num = xe.send(s, buf [, flags])
  */
 int xemsg_send(lua_State *L) {
   const void *buf;
@@ -307,7 +306,7 @@ int xemsg_send(lua_State *L) {
   return xelua_check_int(L, nn_send( luaL_checkinteger(L, 1),
                                      buf,
                                      len,
-                                     luaL_checkinteger(L, 3) ));
+                                     luaL_optinteger(L, 3, 0) ));
 }
 
 /**
