@@ -14,7 +14,7 @@ ifeq ("$(UNAME)","Darwin")
 LUAFLAGS := $(shell pkg-config --cflags '$(LUA) >= $(VER)')
 LUALIBS := $(shell pkg-config --libs '$(LUA) >= $(VER)')
 OSFLAGS :=
-OSLIBS := -bundle -rdynamic
+OSLIBS := -bundle -rdynamic -flat_namespace
 else
 LUAFLAGS = $(shell pkg-config --cflags $(LUAPKG))
 OSFLAGS:= -shared -fPIC
