@@ -86,6 +86,8 @@ Opens an SP socket.
 
 `id [, e_msg, e_num] = xe.socket(domain, protocol)`
 
+Inputs:
+
 - domain: a number, `xe.AF_SP` for standard SP socket, `xe.AF_SP_RAW` for a raw one.
 - protocol: a number, more information in nanomsg documentation:
   [pubsub](http://nanomsg.org/v0.6/nn_pubsub.7.html),
@@ -93,6 +95,8 @@ Opens an SP socket.
   [pipeline](http://nanomsg.org/v0.6/nn_pipeline.7.html),
   [survey](http://nanomsg.org/v0.6/nn_survey.7.html),
   [bus](http://nanomsg.org/v0.6/nn_bus.7.html).
+
+Outputs:
 
 - id: a number with the socket identifier or `nil` in case of failure.
 - e_msg: string with error message only in case of failure.
@@ -104,7 +108,11 @@ Closes an SP socket.
 
 `ok [, e_msg, e_num] = xe.close(s)`
 
+Inputs:
+
 - s: a number with the socket identifier, as returned by `xe.socket`.
+
+Outputs:
 
 - ok: `true` or `nil` value indicating success or failure.
 - e_msg: string with error message, only in case of failure.
@@ -115,6 +123,8 @@ Closes an SP socket.
 Sets a socket option.
 
 `ok [, e_msg, e_num] = xe.setsockopt(s, level, option, optval)`
+
+Inputs:
 
 - s: socket number identifier.
 - level: a number indicating the protocol level related with the option.
@@ -128,6 +138,8 @@ Sets a socket option.
   [nn_setsockopt](http://nanomsg.org/v0.6/nn_setsockopt.3.html) for more
   details.
 
+Outputs:
+
 - ok: `true` or `nil` value indicating success or failure.
 - e_msg: string with error message, only in case of failure.
 - e_num: error number, only in case of failure.
@@ -138,6 +150,8 @@ Retrieves a socket option.
 
 `optval [, e_msg, e_num] = xe.getsockopt(s, level, option)`
 
+Inputs:
+
 - s: socket number identifier.
 - level: a number indicating the protocol level related with the option.
   Use `xe.NN_SOL_SOCKET` for generic socket-level options;
@@ -146,6 +160,8 @@ Retrieves a socket option.
 - option: number indicating which option. See
   [nn_setsockopt](http://nanomsg.org/v0.6/nn_setsockopt.3.html) for available
   options values.
+
+Outputs:
 
 - optval: number or string depending on the option field. See
   [nn_setsockopt](http://nanomsg.org/v0.6/nn_setsockopt.3.html) for more
@@ -159,10 +175,14 @@ Adds a local endpoint to the socket.
 
 `id [, e_msg, e_num] = xe.bind(s, addr)`
 
+Inputs:
+
 - s: socket number identifier.
 - addr: a string formed by two parts: transport://address. The transport
   indicates which protocol to use. Address meaning depends in transport
   protocol.
+
+Outputs:
 
 - id: number with the endpoint identifier. It can be used with `xe.shutdown()`
   to remove the endpoint. This value is `nil` in case of failure.
@@ -184,10 +204,14 @@ Adds a remote endpoint to the socket.
 
 `id [, e_msg, e_num] = xe.connect(s, addr)`
 
+Inputs:
+
 - s: socket number identifier.
 - addr: a string formed by two parts: transport://address. The transport
   indicates which protocol to use. Address meaning depends in transport
   protocol.
+
+Outputs:
 
 - id: number with the endpoint identifier. It can be used with `xe.shutdown()`
   to remove the endpoint. This value is `nil` in case of failure.
@@ -202,9 +226,13 @@ Removes an endpoint from the socket.
 
 `ok [, e_msg, e_num] = xe.shutdown(s, endpoint)`
 
+Inputs:
+
 - s: socket number identifier.
 - endpoint: a number with the endpoint identifier as returned by `xe.bind()` or
   `xe.connect()`.
+
+Outputs:
 
 - ok: `true` or `nil` value indicating success or failure.
 - e_msg: string with error message, only in case of failure.
@@ -216,10 +244,14 @@ Sends a message.
 
 `size [, e_msg, e_num] = xe.send(s, buf [, flags])`
 
+Inputs:
+
 - s: socket number identifier.
 - buf: a string with the message data.
 - flags: an optional number with a bit set of flags. Normally it is `0` or
   `xe.NN_DONTWAIT`. By default it is set to 0.
+
+Outputs:
 
 - size: the number of bytes in the message, or `nil` in case of failure.
 - e_msg: string with error message, only in case of failure.
@@ -235,6 +267,8 @@ Receives a message.
 
 `msg [, e_msg, e_num] = xe.recv(s, n, flags)`
 
+Inputs:
+
 - s: socket number identifier.
 - n: an optional number indicating the expected size of the message. When this
   parameter is present, a lua_Buffer is given to nanomsg for reducing memory
@@ -242,6 +276,8 @@ Receives a message.
   Lua stack.
 - flags: an optional number with a bit set of flags. Normally it is `0` or
   `xe.NN_DONTWAIT`. By default it is set to 0.
+
+Outputs:
 
 - msg: a string with the received message or `nil` in case of failure.
 - e_msg: string with error message, only in case of failure.
@@ -254,8 +290,12 @@ Multiplexing several sockets for events.
 
 `n [, e_msg, e_num] = xe.poll(fds [, timeout])`
 
+Inputs:
+
 - fds: a table used as input/output parameter.
 - timeout: optional number of mili-seconds before timeout, by default it is 0.
+
+Outputs:
 
 - n: a number indicating how many SP sockets are ready for the indicated events.
   It is 0 in case of timeout, and `nil` in case of failure.
@@ -308,9 +348,13 @@ Starts a device.
 
 `nil,e_msg,e_num = xe.device(s1 [, s2])`
 
+Inputs:
+
 - s1: socket number identifier.
 - s2: socket number identifier, optional, if not given the device will be set in
   *loopback* mode.
+
+Outputs:
 
 - nil: indicating failure.
 - e_msg: string with error message, returned always.
