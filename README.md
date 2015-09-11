@@ -320,8 +320,8 @@ fds = {
 }
 ```
 
-The field `events` contains the values `xe.NN_POLLIN`, `xe.NN_POLLOUT` or
-`xe.NN_POLLINOUT`. When n>0, this table is updated with an additional field:
+The field `events` contains a binary combination of 0 and values `xe.NN_POLLIN`,
+`xe.NN_POLLOUT`. When n>0, this table is updated with an additional field:
 
 ```
 fds = {
@@ -339,8 +339,8 @@ fds = {
 }
 ```
 
-The field `revents` indicates which of the `events` are ready, so it will be any
-of the following values: `xe.NN_POLLIN`, `xe.NN_POLLOUT` or `xe.NN_POLLINOUT`.
+The field `revents` indicates which of the `events` are ready, so it will be
+a binary combination of 0 and values `xe.NN_POLLIN`, `xe.NN_POLLOUT`.
 
 **device(s1 [, s2])**
 

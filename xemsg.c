@@ -37,6 +37,7 @@
 #include <nanomsg/reqrep.h>
 #include <nanomsg/survey.h>
 
+#define SYMBOL_NAMES_FIELD  "SYMBOL_NAMES"
 #define XEMSG_NAME_FIELD    "_NAME"
 #define XEMSG_NAME          "Xemsg!"
 #define XEMSG_VERSION_FIELD "_VERSION"
@@ -397,14 +398,17 @@ int luaopen_xemsg(lua_State *L) {
   luaL_newlib(L, funcs);
 #endif  
   
+  lua_newtable(L);
   /* export all available symbols */
   for (i=0; (symbol_name = nn_symbol(i, &symbol_value)); ++i) {
     lua_pushinteger(L, symbol_value);
-    lua_setfield(L, -2, symbol_name);
+    lua_setfield(L, -3, symbol_name);
+    lua_pushstring(L, symbol_name);
+    lua_rawseti(L, -2, symbol_value);
   }
-  /* add NN_POLLINOUT to avoid using and/or operator in Lua */
-  lua_pushinteger(L, NN_POLLIN & NN_POLLOUT); lua_setfield(L, -2, "NN_POLLINOUT");
-
+  
+  lua_setfield(L, -2, SYMBOL_NAMES_FIELD);
+  
   /* add version and name of this module */
   lua_pushstring(L, XEMSG_NAME);
   lua_setfield(L, -2, XEMSG_NAME_FIELD);
