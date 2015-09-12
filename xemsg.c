@@ -354,11 +354,19 @@ int xemsg_shutdown(lua_State *L) {
 }
 
 /**
- * id,e_msg,e_num = xe.socket(domain, protocol)
+ * id,e_msg,e_num = xe.socket([domain,] protocol)
  */
 int xemsg_socket(lua_State *L) {
-  return xelua_check_int(L, nn_socket( luaL_checkinteger(L, 1),
-                                       luaL_checkinteger(L, 2) ));
+  int n = lua_gettop(L), domain=AF_SP;
+  if (n == 2) domain = luaL_checkinteger(L, 1);
+  if (n < 1 || n > 2) {
+    lua_pushnil(L);
+    lua_pushstring(L, "Incorrect number of arguments, expected 1 or 2");
+    lua_pushnumber(L, EINVAL);
+    return 3;
+  }
+  return xelua_check_int(L, nn_socket( domain,
+                                       luaL_checkinteger(L, n) ));
 }
 
 /**

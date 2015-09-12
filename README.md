@@ -47,6 +47,7 @@ Additionally, you can force the Lua version by doing:
 
 ```
 $ make LUAPKG=lua5.2
+$ sudo make LUAPKG=lua5.2 install
 ```
 
 where `lua5.2` can be replaced by `lua5.1` and `luajit`.
@@ -63,14 +64,14 @@ perform different actions depending in the error type.
 
 ```Lua
 > xe = require "xemsg"
-> s = assert( xe.socket(xe.AF_SP, xe.NN_PULL) )
+> s = assert( xe.socket(xe.NN_PULL) )
 ```
 
 Xemsg! is at least as easier as nanomsg. The following is a simple server
 example which opens a TCP port, waits for messages and prints them into screen:
 
 ```Lua
-> s = assert( xe.socket(xe.AF_SP, xe.NN_PULL) )
+> s = assert( xe.socket(xe.NN_PULL) )
 > x = assert( xe.bind(s, "tcp://*:4321") )
 > while true do print(xe.recv(s)) end
 ```
@@ -80,15 +81,16 @@ example which opens a TCP port, waits for messages and prints them into screen:
 This documentation is based on the
 [official nanomsg reference](http://nanomsg.org/documentation.html).
 
-**socket(domain, protocol)**
+**socket([domain,] protocol)**
 
 Opens an SP socket.
 
-`id [, e_msg, e_num] = xe.socket(domain, protocol)`
+`id [, e_msg, e_num] = xe.socket([domain,] protocol)`
 
 Inputs:
 
-- domain: a number, `xe.AF_SP` for standard SP socket, `xe.AF_SP_RAW` for a raw one.
+- domain: an optional number, `xe.AF_SP` for standard SP socket, `xe.AF_SP_RAW`
+  for a raw one. If not given, it is `xe.AF_SP` by default.
 - protocol: a number, more information in nanomsg documentation:
   [pubsub](http://nanomsg.org/v0.6/nn_pubsub.7.html),
   [reqprep](http://nanomsg.org/v0.6/nn_reqrep.7.html),
