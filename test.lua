@@ -2,10 +2,10 @@ local xe = require "xemsg"
 
 -- socket/bind/connect test
 local server = assert( xe.socket(xe.AF_SP, xe.NN_PULL) )
-assert( server:bind("tcp://*:4321") )
+local e1 = assert( server:bind("tcp://*:4321") )
 
 local client = assert( xe.socket(xe.AF_SP, xe.NN_PUSH) )
-assert( client:connect("tcp://localhost:4321") )
+local e2 = assert( client:connect("tcp://localhost:4321") )
 
 -- send/recv test
 assert( client:send("Hello World!") )
@@ -19,3 +19,5 @@ assert( assert( xe.poll(fds, 1000) ) == 1 ) -- timeout=1000 ms
 assert( fds[1].revents == fds[1].events )
 assert( assert( server:recv() ) == "Another test" )
 assert( assert( server:recv() ) == "Another test 2" )
+server:shutdown(e1)
+client:shutdown(e2)

@@ -183,7 +183,7 @@ int xelua_errorsucc(lua_State *L, int r) {
  */
 int xemsg_socket_gc(lua_State *L) {
   int s = *xelua_checksocket(L, 1);
-  if (s > 0) nn_close(s);
+  if (s >= 0) nn_close(s);
   return 0;
 }
 
