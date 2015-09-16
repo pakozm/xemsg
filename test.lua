@@ -19,5 +19,5 @@ assert( assert( xe.poll(fds, 1000) ) == 1 ) -- timeout=1000 ms
 assert( fds[1].revents == fds[1].events )
 assert( assert( server:recv() ) == "Another test" )
 assert( assert( server:recv() ) == "Another test 2" )
-server:shutdown(e1)
-client:shutdown(e2)
+assert( server:shutdown(e1) )
+assert( client:shutdown(e2) )
