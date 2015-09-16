@@ -72,9 +72,15 @@ example which opens a TCP port, waits for messages and prints them into screen:
 
 ```Lua
 > s = assert( xe.socket(xe.NN_PULL) )
-> x = assert( xe.bind(s, "tcp://*:4321") )
-> while true do print(xe.recv(s)) end
+    > x = assert( s:bind("tcp://*:4321") )
+> while true do print( s:recv() ) end
 ```
+
+Notice that SP sockets are Lua objects, being full userdatas with a common
+metatable. Similarly as Lua does with `string` and their metatable, all SP
+objects has as a reference to `xe` table, so, as long as a function receives a
+SP socket object in its first argument, the function can be called as a method
+using `:` operator for simplicity.
 
 ### Reference
 
@@ -85,7 +91,7 @@ This documentation is based on the
 
 Opens an SP socket.
 
-`id [, e_msg, e_num] = xe.socket([domain,] protocol)`
+`s [, e_msg, e_num] = xe.socket([domain,] protocol)`
 
 Inputs:
 
@@ -100,9 +106,15 @@ Inputs:
 
 Outputs:
 
-- id: a number with the socket identifier or `nil` in case of failure.
+- s: a SP socket object, `nil` in case of failure.
 - e_msg: string with error message only in case of failure.
 - e_num: error number, only in case of failure.
+
+Notice that SP sockets are Lua objects, being full userdatas with a common
+metatable. Similarly as Lua does with `string` and their metatable, all SP
+objects has as a reference to `xe` table, so, as long as a function receives a
+SP socket object in its first argument, the function can be called as a method
+using `:` operator for simplicity.
 
 **close(s)**
 
@@ -112,7 +124,7 @@ Closes an SP socket.
 
 Inputs:
 
-- s: a number with the socket identifier, as returned by `xe.socket`.
+- s: a SP socket object, as returned by `xe.socket`.
 
 Outputs:
 
@@ -128,7 +140,7 @@ Sets a socket option.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - level: a number indicating the protocol level related with the option.
   Use `xe.NN_SOL_SOCKET` for generic socket-level options;
   socket type for socket-type-specific options (e.g. `xe.NN_SUB`);
@@ -154,7 +166,7 @@ Retrieves a socket option.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - level: a number indicating the protocol level related with the option.
   Use `xe.NN_SOL_SOCKET` for generic socket-level options;
   socket type for socket-type-specific options (e.g. `xe.NN_SUB`);
@@ -179,7 +191,7 @@ Adds a local endpoint to the socket.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - addr: a string formed by two parts: transport://address. The transport
   indicates which protocol to use. Address meaning depends in transport
   protocol.
@@ -208,7 +220,7 @@ Adds a remote endpoint to the socket.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - addr: a string formed by two parts: transport://address. The transport
   indicates which protocol to use. Address meaning depends in transport
   protocol.
@@ -230,7 +242,7 @@ Removes an endpoint from the socket.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - endpoint: a number with the endpoint identifier as returned by `xe.bind()` or
   `xe.connect()`.
 
@@ -248,7 +260,7 @@ Sends a message.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - buf: a string with the message data.
 - flags: an optional number with a bit set of flags. Normally it is `0` or
   `xe.NN_DONTWAIT`. By default it is set to 0.
@@ -271,7 +283,7 @@ Receives a message.
 
 Inputs:
 
-- s: socket number identifier.
+- s: SP socket object.
 - n: an optional number indicating the expected size of the message. When this
   parameter is present, a lua_Buffer is given to nanomsg for reducing memory
   overhead. If not given, the string returned by nanomsg will be duplicated into
@@ -311,11 +323,11 @@ structure:
 ```
 fds = {
   {
-    fd=socket number identifier,
+    fd=SP socket object,
     events=bit set number,
   },
   {
-    fd=another socket number identifier,
+    fd=another SP socket object,
     events=another bit set number,
   },
   ...
@@ -328,12 +340,12 @@ The field `events` contains a binary combination of 0 and values `xe.NN_POLLIN`,
 ```
 fds = {
   {
-    fd=socket number identifier,
+    fd=SP socket object,
     events=bit set number,
     revents=bit set number,
   },
   {
-    fd=another socket number identifier,
+    fd=another SP socket object,
     events=another bit set number,
     revents=another bit set number,
   },
@@ -352,8 +364,8 @@ Starts a device.
 
 Inputs:
 
-- s1: socket number identifier.
-- s2: socket number identifier, optional, if not given the device will be set in
+- s1: SP socket object.
+- s2: SP socket object, optional, if not given the device will be set in
   *loopback* mode.
 
 Outputs:

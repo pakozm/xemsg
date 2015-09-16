@@ -43,9 +43,78 @@
 #define XEMSG_VERSION_FIELD "_VERSION"
 #define XEMSG_VERSION       "0.1"
 
+#define SOCKET_METATABLE "xemsg.socket"
+
 #if LUA_VERSION_NUM < 502
 #define luaL_len(L,n) (int)lua_objlen((L),(n))
+
+void *luaL_testudata(lua_State *L, int n, const char *tname) {
+  if (!lua_isuserdata(L,n) || !lua_getmetatable(L,n)) return NULL;
+  luaL_getmetatable(L, tname);
+  int eq = lua_rawequal(L,-1,-2);
+  lua_pop(L,2); // remove metatables
+  if (!eq) return NULL;
+  return lua_touserdata(L,n);
+}
+
+void luaL_setmetatable(lua_State *L, const char *tname) {
+  luaL_getmetatable(L,tname);
+  lua_setmetatable(L,-2);
+}
 #endif
+
+/**
+ * Pushes a POSIX error into the stack and returns the number of pushed values.
+ */
+int xelua_pusherror(lua_State *L, const char *msg, int err) {
+  lua_pushnil(L);
+  lua_pushstring(L, msg);
+  lua_pushnumber(L, err);
+  return 3;
+}
+
+/**
+ * Returns if the value is a socket or no.
+ */
+int xelua_issocket(lua_State *L, int n, int *s) {
+  int *aux = luaL_testudata(L, n, SOCKET_METATABLE);
+  if (aux == NULL) return 0;
+  if (s != NULL) *s = *aux;
+  return 1;
+}
+
+/**
+ * Returns the socket pointer.
+ */
+int *xelua_checksocket(lua_State *L, int n) {
+  int *s = (int*)luaL_testudata(L, n, SOCKET_METATABLE);
+  if (s == NULL) {
+    luaL_error(L, "Expected a socket as argument");
+    return NULL;
+  }
+  return s;
+}
+
+/**
+ * Returns the socket integer value or the given def in case of testudata
+ * fails.
+ */
+int xelua_optsocket(lua_State *L, int n, int def) {
+  int *s = (int*)luaL_testudata(L, n, SOCKET_METATABLE);
+  if (s == NULL) return def;
+  return *s;
+}
+
+/**
+ * Allocates a new socket and pushes it into the Lua stack. Returns the number
+ * of pushed values.
+ */
+int xelua_newsocket(lua_State *L, int value) {
+  int *s = (int*)lua_newuserdata(L, sizeof(int));
+  *s = value;
+  luaL_setmetatable(L, SOCKET_METATABLE);
+  return 1;
+}
 
 /**
  * Returns 1 if the value 'n' at stack 'L' is an integer, and stores its value
@@ -77,13 +146,10 @@ int xelua_isshort(lua_State *L, int n, short *r) {
  * Checks the value of 'r', in case of 'r<0', it pushes into stack 'L'
  * a nil value, an error message string and the error number.
  */
-int xelua_check_error(lua_State *L, int r) {
+int xelua_error(lua_State *L, int r) {
   if (r < 0) {
     int err = nn_errno();
-    lua_pushnil(L);
-    lua_pushstring(L, nn_strerror(err));
-    lua_pushnumber(L, err);
-    return 3;
+    return xelua_pusherror(L, nn_strerror(err), err);
   }
   return 0;
 }
@@ -92,8 +158,8 @@ int xelua_check_error(lua_State *L, int r) {
  * Checks a returned int and pushes it into Lua in case of success, otherwise
  * pushes a nil value followed by the error string and error number.
  */
-int xelua_check_int(lua_State *L, int r) {
-  int nret = xelua_check_error(L, r);
+int xelua_errorint(lua_State *L, int r) {
+  int nret = xelua_error(L, r);
   if (nret) return nret;
   lua_pushinteger(L, r);
   return 1;
@@ -103,11 +169,31 @@ int xelua_check_int(lua_State *L, int r) {
  * Checks a returned int and pushes true into Lua in case of success, otherwise
  * pushes a nil value followed by the error string and error number.
  */
-int xelua_check_succ(lua_State *L, int r) {
-  int nret = xelua_check_error(L, r);
+int xelua_errorsucc(lua_State *L, int r) {
+  int nret = xelua_error(L, r);
   if (nret) return nret;
   lua_pushboolean(L, 1);
   return 1; 
+}
+
+/***************************************************************************/
+
+/**
+ * Socket __gc metamethod, terminates the socket connection.
+ */
+int xemsg_socket_gc(lua_State *L) {
+  int s = *xelua_checksocket(L, 1);
+  if (s > 0) nn_close(s);
+  return 0;
+}
+
+/**
+ * Socket __tostring metamethod returns a string with the socket number.
+ */
+int xemsg_socket_tostring(lua_State *L) {
+  int s = *xelua_checksocket(L, 1);
+  lua_pushfstring(L, "SP-socket: %d", s);
+  return 1;
 }
 
 /***************************************************************************/
@@ -130,31 +216,34 @@ int xelua_check_succ(lua_State *L, int r) {
  * id,e_msg,e_num = xe.bind(s, addr) 
  */
 int xemsg_bind(lua_State *L) {
-  return xelua_check_int(L, nn_bind( luaL_checkinteger(L, 1),
-                                     luaL_checkstring(L,2) ));
+  return xelua_errorint(L, nn_bind( *xelua_checksocket(L, 1),
+                                    luaL_checkstring(L,2) ));
 }
 
 /**
  * ok,e_msg,e_num = xe.close(s)
  */
 int xemsg_close(lua_State *L) {
-  return xelua_check_succ(L, nn_close( luaL_checkinteger(L, 1) ));
+  int *s = xelua_checksocket(L, 1);
+  int r = xelua_errorsucc(L, nn_close(*s) );
+  *s = -1; // invalid socket number
+  return r;
 }
 
 /**
  * id,e_msg,e_num = xe.connect(s, addr)
  */
 int xemsg_connect(lua_State *L) {
-  return xelua_check_int(L, nn_connect( luaL_checkinteger(L, 1),
-                                        luaL_checkstring(L, 2) ));
+  return xelua_errorint(L, nn_connect( *xelua_checksocket(L, 1),
+                                       luaL_checkstring(L, 2) ));
 }
 
 /**
  * nil,e_msg,e_num = xe.device(s1[, s2])
  */
 int xemsg_device(lua_State *L) {
-  return xelua_check_succ(L, nn_device( luaL_checkinteger(L, 1),
-                                        luaL_optinteger(L, 2, -1) ));
+  return xelua_errorsucc(L, nn_device( *xelua_checksocket(L, 1),
+                                       xelua_optsocket(L, 2, -1) ));
 }
 
 /**
@@ -164,12 +253,12 @@ int xemsg_getsockopt(lua_State *L) {
   void *optval = NULL;
   size_t optvallen;
   int option = luaL_checkinteger(L, 3);
-  int r = nn_getsockopt( luaL_checkinteger(L, 1),
+  int r = nn_getsockopt( *xelua_checksocket(L, 1),
                          luaL_checkinteger(L, 2),
                          option,
                          optval,
                          &optvallen );
-  int nret = xelua_check_error(L, r);
+  int nret = xelua_error(L, r);
   if (nret) return nret; /* error case */
   /* the value optval depends on option value, check it and push into Lua the
      corresponding result */
@@ -184,6 +273,7 @@ int xemsg_getsockopt(lua_State *L) {
  * n,e_msg,e_num = xemsg_poll({ {fd=fd, events=events}, {fd=fd, events=events}, ...} [, timeout])
  */
 int xemsg_poll(lua_State *L) {
+  if (xelua_issocket(L,1,NULL)) lua_remove(L,1); // to allow s:poll(...) call
   struct nn_pollfd *fds;
   int n = luaL_len(L,1), i, milis, r, nret;
   /* alloc memory for pollfd array, initializing it with the data of Lua table
@@ -193,16 +283,19 @@ int xemsg_poll(lua_State *L) {
     lua_rawgeti(L, 1, i);
     lua_getfield(L, -1, "fd");
     lua_getfield(L, -2, "events");
-    if (!xelua_isshort(L, -1, &fds[i-1].events) ||
-        !xelua_isinteger(L, -2, &fds[i-1].fd)) {
+    if (!xelua_isshort(L, -1, &fds[i-1].events)) {
       free(fds);
-      return luaL_error(L, "Expected integer values");
+      return luaL_error(L, "Expected an integer at events field");
+    }
+    if (!xelua_issocket(L, -2, &fds[i-1].fd)) {
+      free(fds);
+      return luaL_error(L, "Expected a socket at fd field");
     }
     lua_pop(L, 3);
   }
   milis = luaL_optinteger(L, 2, 0);
   r = nn_poll( fds, n, milis ); /* LIBRARY CALL */
-  nret = xelua_check_error(L, r);
+  nret = xelua_error(L, r);
   if (nret) { /* error case */
     free(fds);
     return nret;
@@ -238,8 +331,8 @@ int xemsg_recv(lua_State *L) {
     /* optional flags */
     if (n == 2) flags = luaL_checkinteger(L, 2);
     void *buf;
-    int r = nn_recv( luaL_checkinteger(L, 1), &buf, NN_MSG, flags );
-    int nret = xelua_check_error(L, r);
+    int r = nn_recv( *xelua_checksocket(L, 1), &buf, NN_MSG, flags );
+    int nret = xelua_error(L, r);
     if (nret) return nret; /* error case */
     lua_pushlstring(L, buf, r);
     nn_freemsg(buf);
@@ -249,13 +342,13 @@ int xemsg_recv(lua_State *L) {
     /* third case: three values, the socket, the expected message size and the
        flags; call nn_recv with a Lua buffer allocated to store the expected
        length */
-    int s     = luaL_checkinteger(L, 1);
+    int s     = *xelua_checksocket(L, 1);
     int flags = luaL_checkinteger(L, 3);
 #if LUA_VERSION_NUM < 502
     /* TODO: implement using luaL_Buffer in Lua 5.1 */
     void *buf;
     int r = nn_recv( s, &buf, NN_MSG, flags );
-    int nret = xelua_check_error(L, r);
+    int nret = xelua_error(L, r);
     if (nret) return nret; /* error case */
     lua_pushlstring(L, buf, r);
     nn_freemsg(buf);
@@ -268,16 +361,15 @@ int xemsg_recv(lua_State *L) {
     if (r < 0) {
       int err = nn_errno();
       luaL_pushresultsize(&buf, sz); lua_pop(L, 1);
-      lua_pushnil(L);
-      lua_pushstring(L, nn_strerror(err));
-      lua_pushnumber(L, err);
-      return 3;
+      return xelua_pusherror(L, nn_strerror(err), err);
     }
     luaL_pushresultsize(&buf, sz);
     return 1;
 #endif
   } else {
-    return luaL_error(L, "Incorrect number of arguments, expected 2 or 3");
+    return
+      xelua_pusherror(L, "Incorrect number of arguments, expected two or three",
+                      EINVAL);
   }
 }
 
@@ -298,16 +390,15 @@ int xemsg_send(lua_State *L) {
     buf =luaL_checkstring(L, 2);
     break;
   default:
-    lua_pushnil(L);
-    lua_pushstring(L, "Expected string or nn_buffer at 2nd argument");
-    lua_pushnumber(L, EINVAL);
-    return 3;
+    return
+      xelua_pusherror(L, "Expected string or nn_buffer at 2nd argument",
+                      EINVAL);
   }
   len = luaL_len(L, 2);
-  return xelua_check_int(L, nn_send( luaL_checkinteger(L, 1),
-                                     buf,
-                                     len,
-                                     luaL_optinteger(L, 3, 0) ));
+  return xelua_errorint(L, nn_send( *xelua_checksocket(L, 1),
+                                    buf,
+                                    len,
+                                    luaL_optinteger(L, 3, 0) ));
 }
 
 /**
@@ -333,24 +424,23 @@ int xemsg_setsockopt(lua_State *L) {
     optvallen = sizeof(char) * luaL_len(L, 4);
     break;
   default:
-    lua_pushnil(L);
-    lua_pushstring(L, "Expected number or string at 4th argument");
-    lua_pushnumber(L, EINVAL);
-    return 3;
+    return
+      xelua_pusherror(L, "Expected number or string at 4th argument",
+                      EINVAL);
   }
-  return xelua_check_succ(L, nn_setsockopt( luaL_checkinteger(L, 1),
-                                            luaL_checkinteger(L, 2),
-                                            luaL_checkinteger(L, 3),
-                                            optval,
-                                            optvallen ));
+  return xelua_errorsucc(L, nn_setsockopt( *xelua_checksocket(L, 1),
+                                           luaL_checkinteger(L, 2),
+                                           luaL_checkinteger(L, 3),
+                                           optval,
+                                           optvallen ));
 }
 
 /**
  * ok,e_msg,e_num = xe.shutdown(s, how)
  */
 int xemsg_shutdown(lua_State *L) {
-  return xelua_check_succ(L, nn_shutdown( luaL_checkinteger(L, 1),
-                                          luaL_checkinteger(L, 2) ));
+  return xelua_errorsucc(L, nn_shutdown( *xelua_checksocket(L, 1),
+                                         luaL_checkinteger(L, 2) ));
 }
 
 /**
@@ -360,13 +450,13 @@ int xemsg_socket(lua_State *L) {
   int n = lua_gettop(L), domain=AF_SP;
   if (n == 2) domain = luaL_checkinteger(L, 1);
   if (n < 1 || n > 2) {
-    lua_pushnil(L);
-    lua_pushstring(L, "Incorrect number of arguments, expected 1 or 2");
-    lua_pushnumber(L, EINVAL);
-    return 3;
+    return
+      xelua_pusherror(L, "Incorrect number of arguments, expected 1 or 2",
+                      EINVAL);
   }
-  return xelua_check_int(L, nn_socket( domain,
-                                       luaL_checkinteger(L, n) ));
+  int s = nn_socket( domain, luaL_checkinteger(L, n) );
+  if (s < 0) return xelua_error(L, s);
+  return xelua_newsocket(L, s);
 }
 
 /**
@@ -398,13 +488,13 @@ int luaopen_xemsg(lua_State *L) {
     {"term", xemsg_term},
     {NULL, NULL}
   };
-
+  
 #if LUA_VERSION_NUM < 502
   lua_newtable(L);
   luaL_register(L, NULL, funcs);
 #else
   luaL_newlib(L, funcs);
-#endif  
+#endif
   
   lua_newtable(L);
   /* export all available symbols */
@@ -422,6 +512,17 @@ int luaopen_xemsg(lua_State *L) {
   lua_setfield(L, -2, XEMSG_NAME_FIELD);
   lua_pushstring(L, XEMSG_VERSION);
   lua_setfield(L, -2, XEMSG_VERSION_FIELD);
+
+  /* set socket metamethods */
+  if (luaL_newmetatable(L, SOCKET_METATABLE)) {
+    lua_pushvalue(L, -2);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, xemsg_socket_gc);
+    lua_setfield(L, -2, "__gc");
+    lua_pushcfunction(L, xemsg_socket_tostring);
+    lua_setfield(L, -2, "__tostring");
+  }
+  lua_pop(L, 1);
   
   return 1;
 }
