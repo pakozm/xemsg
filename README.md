@@ -72,8 +72,16 @@ example which opens a TCP port, waits for messages and prints them into screen:
 
 ```Lua
 > s = assert( xe.socket(xe.NN_PULL) )
-    > x = assert( s:bind("tcp://*:4321") )
+> x = assert( s:bind("tcp://*:4321") )
 > while true do print( s:recv() ) end
+```
+
+And its corresponding client which sends a sequence of messages:
+
+```Lua
+> s = assert( xe.socket(xe.NN_PUSH) )
+> x = assert( s:connect("tcp://localhost:4321") )
+> while true do assert( s:send("message") ) end
 ```
 
 Notice that SP sockets are Lua objects, being full userdatas with a common
