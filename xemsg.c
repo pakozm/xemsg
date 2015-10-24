@@ -470,6 +470,28 @@ int xemsg_term(lua_State *L) {
 
 /***************************************************************************/
 
+/**
+ * Pushes in Lua the integer value of the SP socket.
+ */
+int xemsg_get(lua_State *L) {
+  int s = *xelua_checksocket(L, 1);
+  lua_pushinteger(L,s);
+  return 1;
+}
+
+/**
+ * Pushes in Lua the integer value of the SP socket and assigns not valid value
+ * to the userdata.
+ */
+int xemsg_release(lua_State *L) {
+  int *s = xelua_checksocket(L, 1);
+  lua_pushinteger(L,*s);
+  *s = -1; // invalid socket number
+  return 1;
+}
+
+/***************************************************************************/
+
 int luaopen_xemsg(lua_State *L) {
   int i, symbol_value;
   const char *symbol_name;

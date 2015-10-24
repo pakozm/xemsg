@@ -393,3 +393,33 @@ Notifies all sockets about process termination.
 `xe.term()`
 
 After calling this function all sockets and endpoints will be terminated.
+
+**get()**
+
+Pushes in Lua the integer value of the SP socket.
+
+`n = xe.get(s)`
+
+Inputs:
+
+- s: the SP socket object.
+
+Outputs:
+
+- n: the number associated with SP socket s.
+
+**release()**
+
+Pushes in Lua the integer value of the SP socket and assigns not valid value to
+the userdata. Therefore, the **userdata cannot be used after** calling this
+function.
+
+`n = xe.release(s)`
+
+Inputs:
+
+- s: the SP socket object.
+
+Outputs:
+
+- n: the number associated with SP socket s.
