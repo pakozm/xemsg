@@ -5,6 +5,8 @@ working for Lua 5.1 and Lua 5.2. The name Xemsg! is a valencian joke: we
 normally use the word *nano* to refer to our budies, and in some cases it is
 preceded by *xe* word to form the following interjection: **Xe nano!**
 
+This software has been tested with **nanomsg v1.0.0**.
+
 ## Why another nanomsg binding?
 
 All the requirements we need are not fulfilled in current bindings. The
